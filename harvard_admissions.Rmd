@@ -1,0 +1,36 @@
+---
+title: "Harvard Admissions"
+author: "Alistair Gluck"
+date: "4/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(ggthemes)
+library(fs)
+library(sf)
+library(stringr)
+library(gt)
+library(readxl)
+library(janitor)
+```
+
+```{r admissions_data, echo = FALSE}
+download.fle(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_3.22.19.xlsx", destfile = "spring_2019.xlsx")
+
+spring_2019 <- read_excel("spring_2019.xlsx", skip = 3) %>% 
+  clean_names() %>% 
+  filter(!is.na(course_name))
+
+download.file(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_10.24.18.xlsx", destfile = "fall_2018.xlsx")
+
+fall_2018 <- read_excel("fall_2018.xlsx", skip = 2)%>% 
+  clean_names() %>% 
+  filter(!is.na(course_name))
+
+file_delete("fall_2018.xlsx")
+file_delete("spring_2019.xlsx")
+```
+
