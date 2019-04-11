@@ -19,29 +19,67 @@ library(RColorBrewer)
 ```
 
 ```{r admissions_data, echo = FALSE, cache = TRUE}
-download.file(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_3.22.19.xlsx", destfile = "spring_2019.xlsx")
+#dowloading the data for spring 2019 classes from the website, thus the data and graph should update themselves automatically if the data changes online, assign it to an xlsx file
+
+download.file(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_3.22.19.xlsx", destfile = "spring_2019.xlsx", mode = "wb")
+
+#reading the data from the xlsx file into Rstudio and skipping the first three, irrelevant lines to get to the column titles
 
 spring_2019 <- read_excel("spring_2019.xlsx", skip = 3) %>% 
+
+#cleaning the names of the column titles so that they are all lowercase and spaces are underscores
+  
   clean_names() %>% 
+  
+#filter out entries that have no course name data, this should get rid of all the unnecessary entries at the end of the dataset that contain summative information
+  
   filter(!is.na(course_name))
 
-download.file(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_10.24.18.xlsx", destfile = "fall_2018.xlsx")
+
+#repeating the same steps for the fall 2018 dataset
+
+download.file(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_10.24.18.xlsx", destfile = "fall_2018.xlsx", mode = "wb")
+
+#notice the skip = 2 rather than 3 here, this is due to a difference in the data sets, I wonder why they don't share the same formatting irregularities
 
 fall_2018 <- read_excel("fall_2018.xlsx", skip = 2)%>% 
   clean_names() %>% 
   filter(!is.na(course_name))
+
+
+#delete both xslx files that I've already read into Rstudio to keep the project clean
 
 file_delete("fall_2018.xlsx")
 file_delete("spring_2019.xlsx")
 ```
 
 ```{r graph, echo=FALSE}
+#create a new tbl that will eventually include the ten departments that offered the most courses in spring 2019 and the number they offered
+
 top_10_s <- spring_2019 %>% 
+
+#filter to only include undergrad-focused courses (those with 5 or more undergrads enrolled), this could mean that there are still some graduate school courses included, this would be something that requires more advanced data-cleaning to uncover
+  
   filter(u_grad > 5) %>% 
+  
+#sort data by the different departments
+  
   group_by(course_department) %>%
+  
+#count the number of entries for each department (this correllates to number of courses)
+  
   count() %>% 
+  
+#arrange most-to-least courses offered by department
+  
   arrange(desc(n)) %>% 
+  
+#select only first 10 rows (top 10 departments)
+  
   head(10)
+
+
+#repeat the exact same code for fall 2018, eventually creating a new tbl that includes the ten departments that offered the most courses in fall 2018 and the number they offered
 
 top_10_f <- fall_2018 %>% 
   filter(u_grad > 5) %>% 
@@ -50,13 +88,40 @@ top_10_f <- fall_2018 %>%
   arrange(desc(n)) %>% 
   head(10)
 
+
+#Begin by taking the top ten from fall and piping it into a join function
+
 top_10_f%>% 
+  
+#use an inner join to only include departments that were in both lists, joining them by course_department, fall will have suffix .x and spring will have .y
+  
   inner_join(top_10_s, by = "course_department") %>% 
-  mutate("Change" = n.x - n.y) %>%
+  
+#create a new column that is the difference between the number of courses each department offered in the fall and the spring (ie spring - fall)
+  
+  mutate("Change" = n.y - n.x) %>%
+
+#begin a bar graph with department on the x axis (ordering this by biggest increase to biggest discrease using a new "reorder" argument within aesthetics), and fill the bars with a color that represents the change in courses offered
+  
   ggplot(aes(x = reorder(course_department, Change), y = Change, fill = Change)) +
+  
+#make it a bar graph and don't display the legend, as it doesn't help with comprehension
+  
   geom_col(show.legend = FALSE) +
+  
+#make this a horizontal bar graph rather than a traditional vertical one by flipping the x and y axes
+  
   coord_flip() +
-  labs(x = "Department", y = "Change in Number of Courses Offered", title = "Change in Number of Undergrad Courses \nOffered at Harvard College", subtitle = "Between Fall 2018 and Spring 2019, by Deparment", caption = "Source: Registrar's Office, Harvard University") +
+  
+#since the two axes are self-explanatory, give the graph a title, subtitle, and caption that includes a description and a source
+  
+  labs(title = "Change in Number of Undergrad Courses \nOffered at Harvard College", subtitle = "Between Fall 2018 and Spring 2019, by Deparment", caption = " \n\nOnly Departments with number of courses offered in the top 10 of each semester are included. \nSource: Registrar's Office, Harvard University") +
+  
+#add in a personalized gradient, highest change in dark red, and lowest in navy blue
+  
   scale_fill_gradient(high = "darkred", low = "navy") +
+  
+#add the fivethirtyeight theme that effectively balances vertical line breaks and a slick design
+  
   theme_fivethirtyeight()
 ```
