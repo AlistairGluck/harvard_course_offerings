@@ -15,10 +15,11 @@ library(stringr)
 library(gt)
 library(readxl)
 library(janitor)
+library(RColorBrewer)
 ```
 
-```{r admissions_data, echo = FALSE}
-download.fle(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_3.22.19.xlsx", destfile = "spring_2019.xlsx")
+```{r admissions_data, echo = FALSE, cache = TRUE}
+download.file(url = "https://registrar.fas.harvard.edu/files/fas-registrar/files/class_enrollment_summary_by_term_3.22.19.xlsx", destfile = "spring_2019.xlsx")
 
 spring_2019 <- read_excel("spring_2019.xlsx", skip = 3) %>% 
   clean_names() %>% 
@@ -34,3 +35,28 @@ file_delete("fall_2018.xlsx")
 file_delete("spring_2019.xlsx")
 ```
 
+```{r graph, echo=FALSE}
+top_10_s <- spring_2019 %>% 
+  filter(u_grad > 5) %>% 
+  group_by(course_department) %>%
+  count() %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+top_10_f <- fall_2018 %>% 
+  filter(u_grad > 5) %>% 
+  group_by(course_department) %>%
+  count() %>% 
+  arrange(desc(n)) %>% 
+  head(10)
+
+top_10_f%>% 
+  inner_join(top_10_s, by = "course_department") %>% 
+  mutate("Change" = n.x - n.y) %>%
+  ggplot(aes(x = reorder(course_department, Change), y = Change, fill = Change)) +
+  geom_col(show.legend = FALSE) +
+  coord_flip() +
+  labs(x = "Department", y = "Change in Number of Courses Offered", title = "Change in Number of Undergrad Courses \nOffered at Harvard College", subtitle = "Between Fall 2018 and Spring 2019, by Deparment", caption = "Source: Registrar's Office, Harvard University") +
+  scale_fill_gradient(high = "darkred", low = "navy") +
+  theme_fivethirtyeight()
+```
